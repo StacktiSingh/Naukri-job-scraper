@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Naukri Job Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:       #0a0a0f;
+  --bg2:      #111118;
+  --bg3:      #1a1a24;
+  --border:   rgba(255,255,255,0.07);
+  --border2:  rgba(255,255,255,0.12);
+  --accent:   #6c63ff;
+  --accent2:  #a78bfa;
+  --green:    #34d399;
+  --amber:    #fbbf24;
+  --coral:    #f87171;
+  --text:     #e8e8f0;
+  --muted:    #6b6b80;
+  --muted2:   #9090a8;
+  --font-display: 'Syne', sans-serif;
+  --font-body:    'DM Sans', sans-serif;
+  --font-mono:    'DM Mono', monospace;
+  --radius:   12px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* noise overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+/* glow orbs */
+body::after {
+  content: '';
+  position: fixed;
+  top: -200px; left: -200px;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(108,99,255,0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrapper { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 0 2rem; }
+
+/* ── NAV ── */
+nav {
+  border-bottom: 1px solid var(--border);
+  padding: 1.25rem 0;
+  position: sticky; top: 0;
+  background: rgba(10,10,15,0.85);
+  backdrop-filter: blur(16px);
+  z-index: 100;
+}
+.nav-inner {
+  max-width: 1280px; margin: 0 auto; padding: 0 2rem;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.logo {
+  font-family: var(--font-display);
+  font-size: 1.1rem; font-weight: 800;
+  letter-spacing: -0.02em;
+  display: flex; align-items: center; gap: 10px;
+}
+.logo-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 12px var(--accent);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(0.85)} }
+
+.nav-meta {
+  font-family: var(--font-mono);
+  font-size: 11px; color: var(--muted);
+  display: flex; align-items: center; gap: 6px;
+}
+.nav-meta span { color: var(--green); }
+
+/* ── HERO ── */
+.hero {
+  padding: 5rem 0 3.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.hero-tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--accent2); letter-spacing: 0.1em;
+  text-transform: uppercase; margin-bottom: 1.5rem;
+}
+.hero-tag::before {
+  content: ''; width: 20px; height: 1px; background: var(--accent2);
+}
+h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 800; letter-spacing: -0.03em;
+  line-height: 1.05; margin-bottom: 1rem;
+}
+h1 em { font-style: normal; color: var(--accent2); }
+.hero-sub {
+  font-size: 1rem; color: var(--muted2); max-width: 480px; line-height: 1.7;
+}
+
+/* ── STATS ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 3rem 0;
+}
+.stat-card {
+  background: var(--bg2);
+  padding: 2rem 1.5rem;
+  position: relative; overflow: hidden;
+  transition: background 0.2s;
+}
+.stat-card:hover { background: var(--bg3); }
+.stat-card::after {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  opacity: 0; transition: opacity 0.2s;
+}
+.stat-card:hover::after { opacity: 1; }
+.stat-num {
+  font-family: var(--font-display);
+  font-size: 2.5rem; font-weight: 800;
+  letter-spacing: -0.04em; line-height: 1;
+  margin-bottom: 0.4rem;
+}
+.stat-num.green  { color: var(--green); }
+.stat-num.purple { color: var(--accent2); }
+.stat-num.amber  { color: var(--amber); }
+.stat-num.coral  { color: var(--coral); }
+.stat-label {
+  font-size: 12px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  font-family: var(--font-mono);
+}
+
+/* ── SECTION ── */
+.section { padding: 3rem 0; border-bottom: 1px solid var(--border); }
+.section-header {
+  display: flex; align-items: baseline; gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: 1.3rem; font-weight: 700; letter-spacing: -0.02em;
+}
+.section-count {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--muted); letter-spacing: 0.05em;
+}
+
+/* ── CHARTS GRID ── */
+.charts-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1.5rem; margin-bottom: 1.5rem;
+}
+.chart-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+.chart-card-title {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--muted); text-transform: uppercase;
+  letter-spacing: 0.08em; margin-bottom: 1.25rem;
+}
+.chart-wrap { position: relative; height: 240px; }
+
+.skills-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+.skills-grid {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 1rem;
+}
+.skill-pill {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 100px; padding: 5px 14px;
+  font-size: 12px; font-family: var(--font-mono);
+  transition: all 0.15s;
+}
+.skill-pill:hover { border-color: var(--accent); color: var(--accent2); }
+.skill-pill .pill-count {
+  font-size: 10px; color: var(--muted);
+  background: rgba(255,255,255,0.06);
+  border-radius: 100px; padding: 1px 6px;
+}
+
+/* ── FILTERS ── */
+.filters-row {
+  display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 1.5rem;
+}
+.search-wrap {
+  flex: 1; min-width: 240px; position: relative;
+}
+.search-icon {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  color: var(--muted); font-size: 14px; pointer-events: none;
+}
+input[type="text"], select {
+  background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--text); border-radius: 8px;
+  font-family: var(--font-body); font-size: 14px;
+  padding: 10px 14px; outline: none; width: 100%;
+  transition: border-color 0.15s;
+}
+input[type="text"] { padding-left: 38px; }
+input[type="text"]:focus, select:focus { border-color: var(--accent); }
+select { width: auto; min-width: 160px; cursor: pointer; }
+
+/* ── JOB CARDS ── */
+.jobs-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+.job-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem;
+  display: flex; flex-direction: column; gap: 10px;
+  transition: border-color 0.15s, background 0.15s;
+  position: relative; overflow: hidden;
+}
+.job-card:hover { border-color: var(--border2); background: var(--bg3); }
+.job-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.job-title {
+  font-family: var(--font-display); font-size: 0.95rem;
+  font-weight: 700; line-height: 1.3; flex: 1;
+}
+.job-company {
+  font-size: 13px; color: var(--accent2); font-weight: 500;
+}
+.job-meta {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.meta-tag {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--muted2);
+  font-family: var(--font-mono);
+}
+.meta-tag svg { width: 12px; height: 12px; opacity: 0.6; }
+.job-salary {
+  font-family: var(--font-mono); font-size: 12px;
+  color: var(--green);
+  background: rgba(52,211,153,0.08);
+  border: 1px solid rgba(52,211,153,0.15);
+  border-radius: 6px; padding: 3px 10px;
+  display: inline-flex; align-items: center;
+}
+.job-skills {
+  font-size: 11px; color: var(--muted);
+  display: -webkit-box; line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+  line-height: 1.5;
+}
+.job-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: auto; padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.job-date { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+.job-link {
+  font-size: 11px; color: var(--accent2); text-decoration: none;
+  font-family: var(--font-mono); letter-spacing: 0.03em;
+  display: flex; align-items: center; gap: 4px;
+  transition: color 0.15s;
+}
+.job-link:hover { color: #fff; }
+.no-link { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+
+/* ── PAGINATION ── */
+.pagination {
+  display: flex; justify-content: center; align-items: center;
+  gap: 6px; padding: 2.5rem 0 1rem;
+}
+.page-btn {
+  background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--muted2); border-radius: 8px;
+  padding: 8px 14px; cursor: pointer;
+  font-family: var(--font-mono); font-size: 13px;
+  transition: all 0.15s;
+}
+.page-btn:hover { border-color: var(--accent); color: var(--accent2); }
+.page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ── LOADING ── */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg2) 25%, var(--bg3) 50%, var(--bg2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px; height: 16px;
+}
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+.empty-state {
+  grid-column: 1/-1; text-align: center;
+  padding: 4rem 2rem; color: var(--muted);
+}
+.empty-state p { font-family: var(--font-mono); font-size: 13px; margin-top: 0.5rem; }
+
+/* ── FOOTER ── */
+footer {
+  padding: 2rem 0; text-align: center;
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--muted); border-top: 1px solid var(--border);
+}
+footer span { color: var(--accent2); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .stats-row { grid-template-columns: repeat(2,1fr); }
+  .charts-grid { grid-template-columns: 1fr; }
+  .jobs-grid { grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 600px) {
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .jobs-grid { grid-template-columns: 1fr; }
+  h1 { font-size: 2rem; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <div class="logo">
+      <div class="logo-dot"></div>
+      JobIntel
+    </div>
+    <div class="nav-meta">
+      live data &nbsp;·&nbsp; <span>naukri.com</span>
+    </div>
+  </div>
+</nav>
+
+<div class="wrapper">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-tag">Python job market intelligence</div>
+    <h1>What the market<br>is <em>actually</em> hiring for</h1>
+    <p class="hero-sub">Real-time scraped data from Naukri — companies, salaries, skills, and locations, updated daily.</p>
+  </section>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-num green">{{ total }}</div>
+      <div class="stat-label">Jobs collected</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num purple">{{ companies }}</div>
+      <div class="stat-label">Unique companies</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num amber">{{ locations }}</div>
+      <div class="stat-label">Locations</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num coral">{{ with_salary }}</div>
+      <div class="stat-label">With salary data</div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-title">Market overview</div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-card-title">Top hiring companies</div>
+        <div class="chart-wrap"><canvas id="companiesChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Jobs by location</div>
+        <div class="chart-wrap"><canvas id="locationsChart"></canvas></div>
+      </div>
+    </div>
+    <div class="skills-card">
+      <div class="chart-card-title">Most demanded skills</div>
+      <div class="skills-grid" id="skillsPills">
+        <div class="skeleton" style="width:80px;height:28px;border-radius:100px"></div>
+        <div class="skeleton" style="width:100px;height:28px;border-radius:100px"></div>
+        <div class="skeleton" style="width:70px;height:28px;border-radius:100px"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- JOB LISTINGS -->
+  <section class="section">
+    <div class="section-header">
+      <div class="section-title">Job listings</div>
+      <div class="section-count" id="results-count">loading...</div>
+    </div>
+
+    <div class="filters-row">
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="searchInput" placeholder="Search title, company, skill…"/>
+      </div>
+      <select id="locationFilter">
+        <option value="">All locations</option>
+      </select>
+    </div>
+
+    <div class="jobs-grid" id="jobsGrid">
+      <!-- cards injected by JS -->
+    </div>
+
+    <div class="pagination" id="pagination"></div>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrapper">
+    built with <span>Python · Flask · BeautifulSoup · MySQL</span> · data from naukri.com
+  </div>
+</footer>
+
+<script>
+const CHART_DEFAULTS = {
+  font: { family: "'DM Mono', monospace", size: 11 },
+  color: '#6b6b80'
+};
+Chart.defaults.font = CHART_DEFAULTS.font;
+Chart.defaults.color = CHART_DEFAULTS.color;
+
+const PURPLE  = 'rgba(108,99,255,';
+const PURPLE2 = 'rgba(167,139,250,';
+const GREEN   = 'rgba(52,211,153,';
+
+// ── Charts ──
+async function loadCompanies() {
+  const res = await fetch('/api/top-companies');
+  const d = await res.json();
+  new Chart(document.getElementById('companiesChart'), {
+    type: 'bar',
+    data: {
+      labels: d.labels,
+      datasets: [{
+        data: d.values,
+        backgroundColor: d.values.map((_,i) => `${PURPLE}${0.9 - i*0.07})`),
+        borderRadius: 6, borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { maxRotation: 35 } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' } }
+      }
+    }
+  });
+}
+
+async function loadLocations() {
+  const res = await fetch('/api/top-locations');
+  const d = await res.json();
+  new Chart(document.getElementById('locationsChart'), {
+    type: 'doughnut',
+    data: {
+      labels: d.labels,
+      datasets: [{
+        data: d.values,
+        backgroundColor: [
+          `${PURPLE}0.9)`,`${PURPLE2}0.85)`,`${GREEN}0.7)`,
+          'rgba(251,191,36,0.7)','rgba(248,113,113,0.7)',
+          'rgba(56,189,248,0.7)','rgba(244,114,182,0.7)','rgba(163,230,53,0.7)'
+        ],
+        borderWidth: 0, hoverOffset: 8
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { padding: 14, boxWidth: 10, boxHeight: 10 } }
+      },
+      cutout: '60%'
+    }
+  });
+}
+
+async function loadSkills() {
+  const res = await fetch('/api/top-skills');
+  const d = await res.json();
+  const container = document.getElementById('skillsPills');
+  const max = d.values[0] || 1;
+  container.innerHTML = d.labels.map((label, i) => `
+    <div class="skill-pill">
+      ${label}
+      <span class="pill-count">${d.values[i]}</span>
+    </div>
+  `).join('');
+}
+
+// ── Locations dropdown ──
+async function loadLocationsFilter() {
+  const res = await fetch('/api/locations-list');
+  const locs = await res.json();
+  const sel = document.getElementById('locationFilter');
+  locs.forEach(loc => {
+    const opt = document.createElement('option');
+    opt.value = loc; opt.textContent = loc;
+    sel.appendChild(opt);
+  });
+}
+
+// ── Jobs grid ──
+let currentPage = 1;
+let searchTimeout;
+
+function iconSVG(path) {
+  return `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="${path}"/></svg>`;
+}
+
+const icons = {
+  loc: "M8 1.5C5.51 1.5 3.5 3.51 3.5 6c0 3.75 4.5 8.5 4.5 8.5s4.5-4.75 4.5-8.5c0-2.49-2.01-4.5-4.5-4.5zM8 7.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z",
+  exp: "M4 8h8M4 5h5M4 11h3",
+  cal: "M3 4.5h10M3 8h10M3 11.5h6M11 9.5v4M13 11.5h-4"
+};
+
+async function loadJobs(page = 1) {
+  const search = document.getElementById('searchInput').value;
+  const location = document.getElementById('locationFilter').value;
+  currentPage = page;
+
+  const grid = document.getElementById('jobsGrid');
+  grid.innerHTML = Array(6).fill(`
+    <div class="job-card">
+      <div class="skeleton" style="width:70%;height:18px"></div>
+      <div class="skeleton" style="width:45%;height:14px;margin-top:4px"></div>
+      <div class="skeleton" style="width:90%;height:12px;margin-top:8px"></div>
+    </div>
+  `).join('');
+
+  const res = await fetch(`/api/jobs?search=${encodeURIComponent(search)}&location=${encodeURIComponent(location)}&page=${page}`);
+  const d = await res.json();
+
+  document.getElementById('results-count').textContent = `${d.total} results`;
+
+  if (d.jobs.length === 0) {
+    grid.innerHTML = `<div class="empty-state"><div style="font-size:2rem">◌</div><p>No jobs found. Try a different search.</p></div>`;
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+
+  grid.innerHTML = d.jobs.map(job => {
+    const salary = (job.salary && job.salary !== '—')
+      ? `<span class="job-salary">${job.salary}</span>` : '';
+    const link = (job.job_url && job.job_url !== '—')
+      ? `<a class="job-link" href="${job.job_url}" target="_blank">View ↗</a>`
+      : `<span class="no-link">—</span>`;
+    const loc = job.location !== '—' ? job.location : 'Location N/A';
+    const exp = job.experience !== '—' ? job.experience : '';
+    const date = job.posted_date !== '—' ? job.posted_date : '';
+    const skills = job.skills !== '—' ? `<div class="job-skills">${job.skills}</div>` : '';
+
+    return `
+    <div class="job-card">
+      <div class="job-card-top">
+        <div class="job-title">${job.title || 'Untitled'}</div>
+      </div>
+      <div class="job-company">${job.company || '—'}</div>
+      <div class="job-meta">
+        <span class="meta-tag">${iconSVG(icons.loc)} ${loc}</span>
+        ${exp ? `<span class="meta-tag">${iconSVG(icons.exp)} ${exp}</span>` : ''}
+      </div>
+      ${salary}
+      ${skills}
+      <div class="job-footer">
+        <span class="job-date">${date}</span>
+        ${link}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Pagination
+  const pag = document.getElementById('pagination');
+  if (d.pages <= 1) { pag.innerHTML = ''; return; }
+
+  let btns = '';
+  const start = Math.max(1, page - 2);
+  const end   = Math.min(d.pages, page + 2);
+  if (page > 1) btns += `<button class="page-btn" onclick="loadJobs(${page-1})">← Prev</button>`;
+  for (let i = start; i <= end; i++) {
+    btns += `<button class="page-btn ${i===page?'active':''}" onclick="loadJobs(${i})">${i}</button>`;
+  }
+  if (page < d.pages) btns += `<button class="page-btn" onclick="loadJobs(${page+1})">Next →</button>`;
+  pag.innerHTML = btns;
+}
+
+// ── Events ──
+document.getElementById('searchInput').addEventListener('input', () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => loadJobs(1), 400);
+});
+document.getElementById('locationFilter').addEventListener('change', () => loadJobs(1));
+
+// ── Init ──
+loadCompanies();
+loadLocations();
+loadSkills();
+loadLocationsFilter();
+loadJobs(1);
+</script>
+</body>
+</html>
